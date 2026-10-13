@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100 selection:bg-cyan-500 selection:text-black">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITIL Core Zero: SLM Escape Facility</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --neon-cyan: #00f0ff;
+            --neon-magenta: #ff0055;
+            --neon-green: #00ff66;
+            --neon-amber: #ffaa00;
+            --bg-dark: #050811;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--bg-dark);
+            overflow-x: hidden;
+        }
+
+        .font-orbitron { font-family: 'Orbitron', sans-serif; }
+        .font-mono-code { font-family: 'Fira Code', monospace; }
+
+        /* Glowing Neon Effects */
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4), inset 0 0 10px rgba(0, 240, 255, 0.2);
+            border-color: var(--neon-cyan);
+        }
+
+        .glow-magenta {
+            box-shadow: 0 0 15px rgba(255, 0, 85, 0.4), inset 0 0 10px rgba(255, 0, 85, 0.2);
+            border-color: var(--neon-magenta);
+        }
+
+        .glow-green {
+            box-shadow: 0 0 15px rgba(0, 255, 102, 0.4), inset 0 0 10px rgba(0, 255, 102, 0.2);
+            border-color: var(--neon-green);
+        }
+
+        .text-glow-cyan { text-shadow: 0 0 8px rgba(0, 240, 255, 0.7); }
+        .text-glow-magenta { text-shadow: 0 0 8px rgba(255, 0, 85, 0.7); }
+        .text-glow-green { text-shadow: 0 0 8px rgba(0, 255, 102, 0.7); }
+
+        /* CRT Scanline Overlay */
+        .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Glassmorphism Panel */
+        .glass-panel {
+            background: rgba(10, 16, 30, 0.75);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(0, 240, 255, 0.2);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(5, 8, 17, 0.8); }
+        ::-webkit-scrollbar-thumb { background: rgba(0, 240, 255, 0.4); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.8); }
+
+        /* Animations */
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.8; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.02); }
+        }
+        .animate-pulse-glow { animation: pulseGlow 2.5s infinite ease-in-out; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+
+        @keyframes scanline {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(1000%); }
+        }
+        .scanline-beam {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 5px;
+            background: linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.3), transparent);
+            animation: scanline 8s linear infinite;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="h-full text-slate-100 flex flex-col justify-between relative min-h-screen">
+    <!-- Dynamic Canvas Particle Grid -->
+    <canvas id="bg-canvas" class="fixed inset-0 pointer-events-none z-0"></canvas>
+    
+    <!-- CRT Overlay Layer -->
+    <div class="fixed inset-0 crt-overlay z-10 pointer-events-none"></div>
+    <div class="scanline-beam z-10"></div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="relative z-20 flex-1 flex flex-col max-w-7xl w-full mx-auto p-4 md:p-6 lg:p-8">
+        
+        <!-- TOP NAVIGATION & STATUS BAR -->
+        <header class="glass-panel rounded-xl p-4 mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-cyan-500/30">
+            <div class="flex items-center gap-3">
+                <div class="p-2 rounded-lg bg-cyan-950/80 border border-cyan-500/50 text-cyan-400">
+                    <i class="fa-solid font-orbitron fa-shield-halved text-2xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="font-orbitron font-bold text-lg md:text-xl text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-indigo-400 tracking-wider">
+                        ITIL CORE ZERO
+                    </h1>
+                    <p class="text-xs text-slate-400 font-mono-code flex items-center gap-2">
+                        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                        SLM ESCAPE PROTOCOL v4.2
+                    </p>
+                </div>
+            </div>
+
+            <!-- Global Status Metrics -->
+            <div id="status-bar" class="hidden flex flex-wrap items-center gap-4 md:gap-6 text-sm font-mono-code">
+                <!-- Energy / Shields -->
+                <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <span class="text-xs text-slate-400 uppercase">Shields:</span>
+                    <div id="lives-container" class="flex gap-1 text-magenta-400">
+                        <i class="fa-solid fa-bolt text-cyan-400"></i>
+                        <i class="fa-solid fa-bolt text-cyan-400"></i>
+                        <i class="fa-solid fa-bolt text-cyan-400"></i>
+                    </div>
+                </div>
+
+                <!-- Timer -->
+                <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <i class="fa-regular fa-clock text-cyan-400"></i>
+                    <span id="timer-display" class="font-bold text-cyan-300">00:00</span>
+                </div>
+
+                <!-- Score -->
+                <div class="flex items-center gap-2 bg-slate-900/80 px-3 py-1.5 rounded-lg border border-slate-700">
+                    <i class="fa-solid fa-trophy text-amber-400"></i>
+                    <span id="score-display" class="font-bold text-amber-300">0 PTS</span>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex items-center gap-2">
+                <button id="mute-btn" class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-700 hover:border-cyan-500 text-slate-300 hover:text-cyan-400 transition" title="Toggle SFX Audio">
+                    <i id="mute-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- SCREEN 1: START / BRIEFING SCREEN -->
+        <main id="start-screen" class="flex-1 flex flex-col items-center justify-center text-center my-auto py-8">
+            <div class="glass-panel p-6 md:p-10 rounded-2xl max-w-3xl w-full border border-cyan-500/40 relative overflow-hidden">
+                <!-- Cyberpunk Accent Corner Lines -->
+                <div class="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyan-400"></div>
+                <div class="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-cyan-400"></div>
+                <div class="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyan-400"></div>
+                <div class="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyan-400"></div>
+
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-950/60 border border-rose-500/50 text-rose-400 text-xs font-mono-code mb-4 animate-pulse">
+                    <i class="fa-solid fa-triangle-exclamation"></i> CRITICAL DATA CONTAINMENT BREACH
+                </div>
+
+                <h2 class="font-orbitron text-3xl md:text-5xl font-extrabold text-white mb-4 tracking-wide">
+                    SYSTEM <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-teal-200">LOCKDOWN</span>
+                </h2>
+
+                <p class="text-slate-300 text-base md:text-lg mb-6 leading-relaxed max-w-2xl mx-auto font-sans">
+                    You are an IT Operations Specialist trapped inside <strong class="text-cyan-300">ITIL Core Zero</strong>. A rogue AI has encrypted all 12 security blast doors. The only way to override security locks is by answering <strong class="text-teal-300">Service Level Management (SLM)</strong> authorization protocols.
+                </p>
+
+                <!-- Mission Specs -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-left font-mono-code text-sm">
+                    <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center gap-3">
+                        <i class="fa-solid fa-layer-group text-cyan-400 text-xl"></i>
+                        <div>
+                            <div class="text-xs text-slate-400">SECTORS</div>
+                            <div class="text-slate-200 font-bold">12 Security Doors</div>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center gap-3">
+                        <i class="fa-solid fa-shield-cat text-rose-400 text-xl"></i>
+                        <div>
+                            <div class="text-xs text-slate-400">SHIELDS</div>
+                            <div class="text-slate-200 font-bold">3 Tries / Sector</div>
+                        </div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center gap-3">
+                        <i class="fa-solid fa-certificate text-emerald-400 text-xl"></i>
+                        <div>
+                            <div class="text-xs text-slate-400">CLEARANCE</div>
+                            <div class="text-slate-200 font-bold">SLM Master Rank</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="start-btn" class="w-full sm:w-auto px-8 py-4 rounded-xl font-orbitron font-bold text-lg bg-gradient-to-r from-cyan-500 to-teal-500 text-slate-950 hover:from-cyan-400 hover:to-teal-400 transition-all transform hover:-translate-y-0.5 shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-3 mx-auto">
+                    <i class="fa-solid fa-terminal"></i> INITIATE OVERRIDE PROTOCOL
+                </button>
+            </div>
+        </main>
+
+        <!-- SCREEN 2: GAMEPLAY TERMINAL SCREEN -->
+        <main id="game-screen" class="hidden flex-1 flex flex-col gap-6">
+            
+            <!-- Visual Sector Elevator Map Progress Bar -->
+            <section class="glass-panel p-4 rounded-xl">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-orbitron text-xs text-cyan-400 font-bold tracking-wider uppercase flex items-center gap-2">
+                        <i class="fa-solid fa-sitemap"></i> FACILITY SECTOR MAP
+                    </span>
+                    <span id="sector-indicator" class="font-mono-code text-xs text-slate-300">
+                        SECTOR <span class="text-cyan-400 font-bold">01</span> / 12
+                    </span>
+                </div>
+
+                <!-- 12 Sector Nodes -->
+                <div id="sector-nodes-container" class="grid grid-cols-6 md:grid-cols-12 gap-1.5 md:gap-2">
+                    <!-- Dynamic rendering via JS -->
+                </div>
+            </section>
+
+            <!-- Main Question & Story Split Grid -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+                
+                <!-- Left: Cyber Narrative Terminal Prompt (5 Cols) -->
+                <section class="lg:col-span-5 glass-panel p-5 md:p-6 rounded-xl border-l-4 border-l-cyan-400 flex flex-col h-full justify-between">
+                    <div>
+                        <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                            <span id="sector-title" class="font-orbitron font-bold text-cyan-300 text-sm md:text-base flex items-center gap-2">
+                                <i class="fa-solid fa-lock text-rose-400"></i> SECTOR 01: DATA CONDUIT
+                            </span>
+                            <span class="text-xs font-mono-code px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
+                                ENCRYPTED
+                            </span>
+                        </div>
+
+                        <!-- Typewriter Story Narrative Box -->
+                        <div id="narrative-box" class="font-mono-code text-slate-300 text-sm leading-relaxed min-h-[120px] bg-slate-950/70 p-4 rounded-lg border border-slate-800 relative">
+                            <p id="narrative-text" class="inline"></p>
+                            <span class="inline-block w-2 h-4 bg-cyan-400 animate-pulse ml-1 align-middle"></span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs font-mono-code text-slate-400">
+                        <span><i class="fa-solid fa-key text-amber-400 mr-1"></i> Override Code Required</span>
+                        <button id="hint-btn" class="text-cyan-400 hover:text-cyan-300 hover:underline flex items-center gap-1">
+                            <i class="fa-regular fa-lightbulb"></i> Request Hint
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Right: Question Terminal & Answer Buttons (7 Cols) -->
+                <section class="lg:col-span-7 glass-panel p-5 md:p-6 rounded-xl flex flex-col justify-between h-full">
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-xs font-mono-code text-slate-400 uppercase tracking-wider">
+                                <i class="fa-solid fa-terminal text-cyan-400"></i> SECURITY CHALLENGE QUESTION
+                            </span>
+                            <span id="question-type-badge" class="text-xs font-mono-code px-2 py-0.5 rounded bg-slate-800 text-teal-300">
+                                MULTIPLE CHOICE
+                            </span>
+                        </div>
+
+                        <!-- Question Prompt -->
+                        <h3 id="question-text" class="text-base md:text-xl font-bold text-white mb-6 leading-snug font-sans">
+                            <!-- Question injected by JS -->
+                        </h3>
+
+                        <!-- Interactive Options Container -->
+                        <div id="options-container" class="space-y-3">
+                            <!-- Option Buttons injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Hint / Explanatory Alert Area -->
+                    <div id="hint-box" class="hidden mt-4 p-3 rounded-lg bg-amber-950/40 border border-amber-500/40 text-amber-200 text-xs font-mono-code">
+                        <i class="fa-solid fa-circle-info text-amber-400 mr-1"></i>
+                        <span id="hint-text"></span>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- SCREEN 3: GAME OVER SCREEN -->
+        <main id="gameover-screen" class="hidden flex-1 flex flex-col items-center justify-center text-center my-auto py-8">
+            <div class="glass-panel p-6 md:p-10 rounded-2xl max-w-2xl w-full border border-rose-500/60 relative overflow-hidden bg-rose-950/20">
+                <div class="w-16 h-16 rounded-full bg-rose-900/60 border border-rose-500 flex items-center justify-center text-rose-400 text-3xl mx-auto mb-4 animate-bounce">
+                    <i class="fa-solid fa-ban"></i>
+                </div>
+
+                <h2 class="font-orbitron text-3xl md:text-4xl font-extrabold text-rose-500 mb-2 tracking-wide">
+                    SECURITY LOCKDOWN
+                </h2>
+                <p class="text-rose-200 text-sm font-mono-code mb-6">FACILITY DEEP PURGE PROTOCOL INITIATED</p>
+
+                <p class="text-slate-300 text-base mb-6 font-sans">
+                    You ran out of energy shields while trying to bypass the security console. The core containment wall has sealed permanently.
+                </p>
+
+                <!-- Final Stats Summary -->
+                <div class="grid grid-cols-2 gap-4 mb-8 bg-slate-950/80 p-4 rounded-xl border border-slate-800 font-mono-code text-sm">
+                    <div>
+                        <div class="text-xs text-slate-400">SECTORS CLEARED</div>
+                        <div id="go-sectors" class="text-cyan-400 font-bold text-lg">0 / 12</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400">ACCURACY SCORE</div>
+                        <div id="go-accuracy" class="text-amber-400 font-bold text-lg">0%</div>
+                    </div>
+                </div>
+
+                <button id="retry-btn" class="px-8 py-3.5 rounded-xl font-orbitron font-bold bg-rose-600 hover:bg-rose-500 text-white transition shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2 mx-auto">
+                    <i class="fa-solid fa-rotate-left"></i> REBOOT SYSTEM & RETRY
+                </button>
+            </div>
+        </main>
+
+        <!-- SCREEN 4: VICTORY ESCAPE SCREEN -->
+        <main id="victory-screen" class="hidden flex-1 flex flex-col items-center justify-center text-center my-auto py-8">
+            <div class="glass-panel p-6 md:p-10 rounded-2xl max-w-3xl w-full border border-emerald-500/60 relative overflow-hidden bg-emerald-950/10">
+                <div class="w-20 h-20 rounded-full bg-emerald-900/50 border-2 border-emerald-400 flex items-center justify-center text-emerald-300 text-4xl mx-auto mb-4 animate-pulse">
+                    <i class="fa-solid fa-door-open"></i>
+                </div>
+
+                <h2 class="font-orbitron text-3xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-200 to-cyan-400 mb-2">
+                    FACILITY ESCAPED!
+                </h2>
+                <p class="text-emerald-300 text-sm font-mono-code mb-8">ALL 12 ITIL SLM SECURITY SECTORS SUCCESSFULLY OVERRIDDEN</p>
+
+                <!-- Security Clearance Certificate Badge -->
+                <div class="bg-slate-950/90 border-2 border-emerald-500/40 p-6 rounded-xl mb-8 text-left relative">
+                    <div class="text-xs font-mono-code text-emerald-400 uppercase tracking-widest border-b border-slate-800 pb-2 mb-4 flex justify-between">
+                        <span>OFFICIAL CERTIFICATE OF OVERRIDE</span>
+                        <span>CLEARANCE LEVEL: ALPHA</span>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 font-mono-code">
+                        <div class="p-3 bg-slate-900/80 rounded-lg border border-slate-800">
+                            <div class="text-xs text-slate-400">TOTAL ESCAPE TIME</div>
+                            <div id="vic-time" class="text-cyan-300 font-bold text-lg">00:00</div>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 rounded-lg border border-slate-800">
+                            <div class="text-xs text-slate-400">ACCURACY</div>
+                            <div id="vic-accuracy" class="text-emerald-300 font-bold text-lg">100%</div>
+                        </div>
+                        <div class="p-3 bg-slate-900/80 rounded-lg border border-slate-800">
+                            <div class="text-xs text-slate-400">TOTAL SCORE</div>
+                            <div id="vic-score" class="text-amber-300 font-bold text-lg">1200 PTS</div>
+                        </div>
+                    </div>
+
+                    <!-- Awarded Rank Badge -->
+                    <div class="flex items-center gap-4 bg-emerald-950/40 p-4 rounded-xl border border-emerald-500/30">
+                        <div class="p-3 rounded-full bg-emerald-800/50 text-emerald-300 text-2xl">
+                            <i id="vic-rank-icon" class="fa-solid fa-award"></i>
+                        </div>
+                        <div>
+                            <div class="text-xs text-slate-400 font-mono-code">ASSIGNED ITIL RANK</div>
+                            <div id="vic-rank-title" class="font-orbitron font-bold text-lg text-white">MASTER ITIL ARCHITECT</div>
+                            <div id="vic-rank-desc" class="text-xs text-slate-300 font-sans mt-0.5">Flawless mastery of Service Level Management concepts.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="restart-btn" class="px-8 py-4 rounded-xl font-orbitron font-bold text-lg bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 hover:from-emerald-400 hover:to-teal-400 transition shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 mx-auto">
+                    <i class="fa-solid fa-play"></i> REPLAY MISSION
+                </button>
+            </div>
+        </main>
+
+        <!-- FEEDBACK MODAL (Shows detailed explanation on answer submission) -->
+        <div id="modal-overlay" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+            <div id="modal-card" class="glass-panel p-6 md:p-8 rounded-2xl max-w-xl w-full border border-cyan-500/50 relative transform transition-all scale-95 opacity-0">
+                
+                <div class="flex items-center gap-3 mb-4">
+                    <div id="modal-icon-bg" class="w-12 h-12 rounded-full flex items-center justify-center text-2xl">
+                        <i id="modal-icon" class="fa-solid fa-check"></i>
+                    </div>
+                    <div>
+                        <h4 id="modal-title" class="font-orbitron font-bold text-lg text-white">SECURITY CODE VERIFIED</h4>
+                        <span id="modal-subtitle" class="text-xs font-mono-code text-cyan-400">SECTOR CLEARANCE GRANTED</span>
+                    </div>
+                </div>
+
+                <div id="modal-explanation" class="text-sm text-slate-300 font-sans bg-slate-950/80 p-4 rounded-xl border border-slate-800 mb-6 leading-relaxed">
+                    <!-- Detailed ITIL concept explanation injected by JS -->
+                </div>
+
+                <button id="modal-next-btn" class="w-full py-3 rounded-xl font-orbitron font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition flex items-center justify-center gap-2">
+                    PROCEED TO NEXT SECTOR <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="mt-8 text-center text-xs font-mono-code text-slate-500">
+            <p>ITIL Core Zero Escape Room &bull; Service Level Management (SLM) Learning Game</p>
+        </footer>
+    </div>
+
+    <script>
+        // Web Audio API Sound Effects Engine
+        class CyberAudio {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playClick() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playType() {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(1200 + Math.random() * 200, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.03, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.03);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.03);
+            }
+
+            playCorrect() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.25);
+                });
+            }
+
+            playWrong() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(180, now);
+                osc.frequency.linearRampToValueAtTime(80, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            playVictory() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const notes = [440, 554.37, 659.25, 880, 1108.73];
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.4);
+                });
+            }
+        }
+
+        const audio = new CyberAudio();
+
+        // DATASET: 12 Questions with Cyber Story Lore & Explanations
+        const questionsData = [
+            {
+                id: 1,
+                sectorName: "SECTOR 01: MONITORING CONDUIT",
+                lore: "You reach Sector 01. Automated diagnostics are tracking data packets against baseline operational metrics. Enter the process step that automates service performance tracking.",
+                question: "Which step in the SLM process involves tracking service performance against SLA targets using automated tools?",
+                options: [
+                    "A) Step 1: Service Identification",
+                    "B) Step 3: SLA Documentation",
+                    "C) Step 4: Monitoring & Reporting",
+                    "D) Step 6: Continuous Improvement"
+                ],
+                correctIndex: 2,
+                explanation: "Step 4 (Monitoring & Reporting) involves continuously tracking service performance using automated monitoring tools and reporting against agreed SLA targets.",
+                hint: "Look for the step that actively measures performance and generates reports."
+            },
+            {
+                id: 2,
+                sectorName: "SECTOR 02: CONTINUOUS CSI FIREWALL",
+                lore: "Sector 02 requires verifying the final step in the SLM feedback loop that ties directly into the ITIL CSI (Continual Service Improvement) framework.",
+                question: "Step 6 of the SLM process is 'Continuous Improvement.'",
+                options: [
+                    "A) True",
+                    "B) False"
+                ],
+                correctIndex: 0,
+                explanation: "True! Step 6 of the SLM process is Continuous Improvement, which aligns with ITIL's Continual Service Improvement (CSI) framework to ensure ongoing enhancement.",
+                hint: "Does SLM end at monitoring or does it continually refine service quality?"
+            },
+            {
+                id: 3,
+                sectorName: "SECTOR 03: PORTFOLIO VAULT",
+                lore: "The door to Sector 03 controls access to the IT Service Portfolio repository. Authorize the Service Level Manager's key responsibility.",
+                question: "True or False: The Service Level Manager is expected to assist in the production of an accurate service portfolio.",
+                options: [
+                    "A) True",
+                    "B) False"
+                ],
+                correctIndex: 0,
+                explanation: "True! The Service Level Manager works closely with Service Portfolio Management to ensure all active services, pipeline items, and retired services are accurately documented.",
+                hint: "An accurate list of active services is crucial for creating realistic SLAs."
+            },
+            {
+                id: 4,
+                sectorName: "SECTOR 04: CONTRACT SYNCHRONIZER",
+                lore: "Sector 04 connects internal SLAs with external vendor contracts. Validate the contract synchronization protocol.",
+                question: "True or False: The Service Level Manager does not need to synchronize the objectives ratified in underlying contracts with the Service Level Agreement (SLA).",
+                options: [
+                    "A) True",
+                    "B) False"
+                ],
+                correctIndex: 1,
+                explanation: "False! The SLM manager MUST synchronize underlying contracts (UCs) and operational level agreements (OLAs) with the SLA targets, otherwise SLA commitments cannot be guaranteed.",
+                hint: "If a 3rd party vendor fails, can your internal SLA target still be met?"
+            },
+            {
+                id: 5,
+                sectorName: "SECTOR 05: NEGOTIATION HUB",
+                lore: "Sector 05 is the main negotiation hub between business demands and technical capabilities. Identify the core SLM responsibility.",
+                question: "According to ITIL v3, which of the following best describes one of the core responsibilities of Service Level Management (SLM)?",
+                options: [
+                    "A) Writing source code for software deployment",
+                    "B) Negotiating achievable Service Level Agreements (SLAs) and ensuring they are met",
+                    "C) Managing physical server hardware installation and repair",
+                    "D) Defining corporate financial budgets and accounting strategies"
+                ],
+                correctIndex: 1,
+                explanation: "The core mission of SLM is negotiating achievable SLAs with customers and ensuring that all current and planned IT services meet those agreed targets.",
+                hint: "SLM acts as a bridge between customer expectations and IT delivery capabilities."
+            },
+            {
+                id: 6,
+                sectorName: "SECTOR 06: MULTI-SERVICE MATRIX",
+                lore: "Entering Sector 06. The system needs validation on SLA flexibility across various services and customer groups.",
+                question: "A single Service Level Agreement (SLA) can cover multiple IT services or multiple customers.",
+                options: [
+                    "A) True",
+                    "B) False"
+                ],
+                correctIndex: 0,
+                explanation: "True! SLAs can be structured as Multi-level SLAs, Service-based SLAs, or Customer-based SLAs to cover multiple services or customer segments efficiently.",
+                hint: "Think about whether one SLA document can be written for an entire department or service suite."
+            },
+            {
+                id: 7,
+                sectorName: "SECTOR 07: CORE TARGET ROUTER",
+                lore: "Sector 07 requires verifying the master purpose of the entire SLM discipline within IT Service Management.",
+                question: "What is the primary purpose and objective of the Service Level Management process?",
+                options: [
+                    "A) To eliminate the need for third-party suppliers entirely",
+                    "B) To ensure that all current and planned IT services are delivered to agreed, achievable targets",
+                    "C) To lower the total cost of ownership of software licenses",
+                    "D) To manage unexpected major security incidents and cyber threats"
+                ],
+                correctIndex: 1,
+                explanation: "The primary purpose of SLM is to ensure that all current and planned IT services are delivered to agreed, achievable targets through a formal agreement framework.",
+                hint: "SLM is about meeting business expectations through realistic, measurable targets."
+            },
+            {
+                id: 8,
+                sectorName: "SECTOR 08: MULTI-LEVEL STRUCTURER",
+                lore: "Sector 08 contains multi-tiered access corridors. Analyze the concept of Multi-level SLA structures.",
+                question: "A Multi-level SLA only has one level of agreement.",
+                options: [
+                    "A) True",
+                    "B) False"
+                ],
+                correctIndex: 1,
+                explanation: "False! A Multi-level SLA addresses distinct levels: Corporate level, Customer level, and Service level, reducing redundancy across agreements.",
+                hint: "Pay attention to the word 'Multi'."
+            },
+            {
+                id: 9,
+                sectorName: "SECTOR 09: UNIVERSITY DEPLOYMENT TERMINAL",
+                lore: "Sector 09 presents a scenario: A single blanket agreement covers an entire university campus with zero custom tweaks.",
+                question: "A university signs one SLA with its IT vendor that applies to all faculties equally, with no customizations. What type of SLA structure is this?",
+                options: [
+                    "A) Customer-level SLA",
+                    "B) Multi-level SLA",
+                    "C) Service-level SLA",
+                    "D) Single-level SLA"
+                ],
+                correctIndex: 3,
+                explanation: "A Single-level SLA applies uniformly across all customers or services with no customization or multi-layered branching.",
+                hint: "When one size fits all without levels, it is a single-level agreement."
+            },
+            {
+                id: 10,
+                sectorName: "SECTOR 10: SPECIFIC SERVICE BEACON",
+                lore: "Sector 10 focuses on service-centric agreement definitions rather than individual customer profiles.",
+                question: "A Service-level SLA is defined for a specific service rather than a specific customer.",
+                options: [
+                    "A) True",
+                    "B) False"
+                ],
+                correctIndex: 0,
+                explanation: "True! A Service-level SLA covers one specific service (e.g., Email Service) for all customers using that service.",
+                hint: "Service-based SLAs apply to the service itself, regardless of who uses it."
+            },
+            {
+                id: 11,
+                sectorName: "SECTOR 11: CUSTOMER GROUP CLUSTER",
+                lore: "Sector 11 guards the user profile database. Identify the agreement structure covering a distinct customer group.",
+                question: "Which type of SLA covers all services used by a specific customer group?",
+                options: [
+                    "A) Service-based SLA",
+                    "B) Customer-based SLA",
+                    "C) Multi-level SLA",
+                    "D) Operational Level Agreement (OLA)"
+                ],
+                correctIndex: 1,
+                explanation: "A Customer-based SLA covers all IT services used by a single specific customer group or business department (e.g., Finance Dept SLA).",
+                hint: "Which type is tailored specifically around a customer unit?"
+            },
+            {
+                id: 12,
+                sectorName: "SECTOR 12: MASTER EXIT AIRLOCK",
+                lore: "FINAL SECTOR! To unlock the facility airlock, differentiate between external customer SLAs and internal team OLAs.",
+                question: "What is the main difference between an SLA and OLA?",
+                options: [
+                    "A) An SLA is an agreement between a service provider and a customer, while an OLA is an internal agreement within an organization",
+                    "B) An SLA is used internally, while an OLA is an agreement with customers",
+                    "C) An SLA manages hardware, while an OLA manages software",
+                    "D) There is no difference between an SLA and OLA"
+                ],
+                correctIndex: 0,
+                explanation: "SLAs bind the Service Provider and the External/Internal Customer. OLAs (Operational Level Agreements) are internal agreements between different departments within the IT provider organization to support SLA delivery.",
+                hint: "SLA is customer-facing, OLA is internal IT team-facing."
+            }
+        ];
+
+        // Game State Variables
+        let currentQuestionIndex = 0;
+        let lives = 3;
+        let score = 0;
+        let totalAttempts = 0;
+        let correctAnswersCount = 0;
+        let secondsElapsed = 0;
+        let timerInterval = null;
+        let isTyping = false;
+        let typingTimeout = null;
+
+        // Canvas Particle Background
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        class Particle {
+            constructor() {
+                this.reset();
+            }
+            reset() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 0.5;
+                this.speedX = (Math.random() - 0.5) * 0.5;
+                this.speedY = (Math.random() - 0.5) * 0.5;
+                this.opacity = Math.random() * 0.5 + 0.2;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+                    this.reset();
+                }
+            }
+            draw() {
+                ctx.fillStyle = `rgba(0, 240, 255, ${this.opacity})`;
+                ctx.fillRect(this.x, this.y, this.size, this.size);
+            }
+        }
+
+        for (let i = 0; i < 60; i++) particles.push(new Particle());
+
+        function animateCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Subtle Cyber Grid
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.03)';
+            ctx.lineWidth = 1;
+            const gridSize = 40;
+            for (let x = 0; x < canvas.width; x += gridSize) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += gridSize) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateCanvas);
+        }
+        animateCanvas();
+
+        // DOM Elements
+        const startScreen = document.getElementById('start-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const victoryScreen = document.getElementById('victory-screen');
+        const statusBar = document.getElementById('status-bar');
+
+        const startBtn = document.getElementById('start-btn');
+        const retryBtn = document.getElementById('retry-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const muteBtn = document.getElementById('mute-btn');
+        const muteIcon = document.getElementById('mute-icon');
+
+        const livesContainer = document.getElementById('lives-container');
+        const timerDisplay = document.getElementById('timer-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const sectorNodesContainer = document.getElementById('sector-nodes-container');
+
+        const sectorTitle = document.getElementById('sector-title');
+        const sectorIndicator = document.getElementById('sector-indicator');
+        const narrativeText = document.getElementById('narrative-text');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const questionTypeBadge = document.getElementById('question-type-badge');
+        const hintBtn = document.getElementById('hint-btn');
+        const hintBox = document.getElementById('hint-box');
+        const hintText = document.getElementById('hint-text');
+
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalCard = document.getElementById('modal-card');
+        const modalIconBg = document.getElementById('modal-icon-bg');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTitle = document.getElementById('modal-title');
+        const modalSubtitle = document.getElementById('modal-subtitle');
+        const modalExplanation = document.getElementById('modal-explanation');
+        const modalNextBtn = document.getElementById('modal-next-btn');
+
+        // Typewriter Effect Function
+        function typeWriter(text, element, speed = 25, callback = null) {
+            clearTimeout(typingTimeout);
+            element.innerHTML = '';
+            let i = 0;
+            isTyping = true;
+
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    if (i % 3 === 0) audio.playType();
+                    typingTimeout = setTimeout(type, speed);
+                } else {
+                    isTyping = false;
+                    if (callback) callback();
+                }
+            }
+            type();
+        }
+
+        // Render Elevator Sector Nodes Map
+        function renderSectorNodes() {
+            sectorNodesContainer.innerHTML = '';
+            questionsData.forEach((q, idx) => {
+                const node = document.createElement('div');
+                node.className = `p-1.5 rounded-lg border text-center font-mono-code text-xs transition-all duration-300 ${
+                    idx === currentQuestionIndex
+                        ? 'bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-md shadow-cyan-500/30 font-bold scale-105'
+                        : idx < currentQuestionIndex
+                        ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-400'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-600'
+                }`;
+                node.innerHTML = `
+                    <div class="text-[10px] opacity-70">SEC</div>
+                    <div>${idx + 1 < 10 ? '0' + (idx + 1) : idx + 1}</div>
+                `;
+                sectorNodesContainer.appendChild(node);
+            });
+        }
+
+        // Render Energy Shields
+        function updateShieldsDisplay() {
+            livesContainer.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const icon = document.createElement('i');
+                if (i < lives) {
+                    icon.className = 'fa-solid fa-bolt text-cyan-400 animate-pulse';
+                } else {
+                    icon.className = 'fa-solid fa-bolt text-slate-700';
+                }
+                livesContainer.appendChild(icon);
+            }
+        }
+
+        // Timer Control
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+                const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+                timerDisplay.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        // Load Sector Level Question
+        function loadCurrentQuestion() {
+            const currentQ = questionsData[currentQuestionIndex];
+            
+            // Reset state views
+            hintBox.classList.add('hidden');
+            lives = 3;
+            updateShieldsDisplay();
+            renderSectorNodes();
+
+            // Update Titles & Indicators
+            sectorTitle.innerHTML = `<i class="fa-solid fa-lock text-rose-400"></i> ${currentQ.sectorName}`;
+            sectorIndicator.innerHTML = `SECTOR <span class="text-cyan-400 font-bold">${currentQuestionIndex + 1 < 10 ? '0' + (currentQuestionIndex + 1) : currentQuestionIndex + 1}</span> / 12`;
+            
+            questionTypeBadge.textContent = currentQ.options.length === 2 ? "TRUE / FALSE" : "MULTIPLE CHOICE";
+            questionText.textContent = currentQ.question;
+
+            // Typewriter Story Lore
+            typeWriter(currentQ.lore, narrativeText);
+
+            // Render Option Cards
+            optionsContainer.innerHTML = '';
+            currentQ.options.forEach((optText, optIdx) => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left p-3.5 md:p-4 rounded-xl glass-panel border border-slate-700 hover:border-cyan-400 hover:bg-cyan-950/30 text-slate-200 text-sm md:text-base font-sans transition-all duration-200 flex items-center justify-between group transform hover:-translate-y-0.5';
+                btn.innerHTML = `
+                    <span class="font-medium">${optText}</span>
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-600 group-hover:text-cyan-400 transition-colors"></i>
+                `;
+                btn.addEventListener('click', () => handleAnswerSelect(optIdx, btn));
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        // Answer Select Handler
+        function handleAnswerSelect(selectedIndex, optionBtn) {
+            audio.init();
+            const currentQ = questionsData[currentQuestionIndex];
+            totalAttempts++;
+
+            if (selectedIndex === currentQ.correctIndex) {
+                // Correct Answer
+                audio.playCorrect();
+                optionBtn.classList.remove('border-slate-700', 'hover:border-cyan-400');
+                optionBtn.classList.add('border-emerald-400', 'bg-emerald-950/60', 'text-emerald-200', 'glow-green');
+                
+                correctAnswersCount++;
+                score += 100 * lives; // Bonus for remaining shields
+                scoreDisplay.textContent = `${score} PTS`;
+
+                showModal(true, currentQ.explanation);
+            } else {
+                // Incorrect Answer
+                audio.playWrong();
+                lives--;
+                updateShieldsDisplay();
+
+                optionBtn.classList.remove('border-slate-700');
+                optionBtn.classList.add('border-rose-500', 'bg-rose-950/60', 'text-rose-200', 'animate-shake');
+                
+                if (lives <= 0) {
+                    setTimeout(() => triggerGameOver(), 800);
+                } else {
+                    showModal(false, `Authorization code rejected! Shields remaining: ${lives}. Review the ITIL protocol guidelines and try again.`);
+                }
+            }
+        }
+
+        // Modal Control
+        function showModal(isCorrect, explanationText) {
+            modalOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                modalCard.classList.remove('scale-95', 'opacity-0');
+                modalCard.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            if (isCorrect) {
+                modalIconBg.className = "w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-emerald-950 border border-emerald-400 text-emerald-400";
+                modalIcon.className = "fa-solid fa-check";
+                modalTitle.textContent = "SECURITY CODE VERIFIED";
+                modalTitle.className = "font-orbitron font-bold text-lg text-emerald-400";
+                modalSubtitle.textContent = "SECTOR CLEARANCE GRANTED";
+                modalNextBtn.textContent = currentQuestionIndex === 11 ? "ESCAPE FACILITY AIRLOCK" : "PROCEED TO NEXT SECTOR";
+                modalNextBtn.className = "w-full py-3 rounded-xl font-orbitron font-bold bg-emerald-400 hover:bg-emerald-300 text-slate-950 transition flex items-center justify-center gap-2 shadow-lg shadow-emerald-400/20";
+            } else {
+                modalIconBg.className = "w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-rose-950 border border-rose-500 text-rose-400";
+                modalIcon.className = "fa-solid fa-triangle-exclamation";
+                modalTitle.textContent = "AUTHORIZATION DENIED";
+                modalTitle.className = "font-orbitron font-bold text-lg text-rose-400";
+                modalSubtitle.textContent = "SECURITY BREACH ALERT";
+                modalNextBtn.textContent = "RETRY SECTOR CHALLENGE";
+                modalNextBtn.className = "w-full py-3 rounded-xl font-orbitron font-bold bg-rose-500 hover:bg-rose-400 text-white transition flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20";
+            }
+
+            modalExplanation.textContent = explanationText;
+
+            modalNextBtn.onclick = () => {
+                audio.playClick();
+                closeModal();
+                if (isCorrect) {
+                    if (currentQuestionIndex < questionsData.length - 1) {
+                        currentQuestionIndex++;
+                        loadCurrentQuestion();
+                    } else {
+                        triggerVictory();
+                    }
+                } else {
+                    // Re-render question to clear shaking options
+                    loadCurrentQuestion();
+                }
+            };
+        }
+
+        function closeModal() {
+            modalCard.classList.remove('scale-100', 'opacity-100');
+            modalCard.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modalOverlay.classList.add('hidden');
+            }, 200);
+        }
+
+        // Hint Button Listener
+        hintBtn.addEventListener('click', () => {
+            audio.playClick();
+            const currentQ = questionsData[currentQuestionIndex];
+            hintText.textContent = currentQ.hint;
+            hintBox.classList.remove('hidden');
+        });
+
+        // Trigger Game Over
+        function triggerGameOver() {
+            clearInterval(timerInterval);
+            gameScreen.classList.add('hidden');
+            statusBar.classList.add('hidden');
+            gameoverScreen.classList.remove('hidden');
+
+            const goSectors = document.getElementById('go-sectors');
+            const goAccuracy = document.getElementById('go-accuracy');
+
+            goSectors.textContent = `${currentQuestionIndex} / 12`;
+            const accuracyVal = totalAttempts > 0 ? Math.round((correctAnswersCount / totalAttempts) * 100) : 0;
+            goAccuracy.textContent = `${accuracyVal}%`;
+        }
+
+        // Trigger Victory
+        function triggerVictory() {
+            clearInterval(timerInterval);
+            audio.playVictory();
+            gameScreen.classList.add('hidden');
+            statusBar.classList.add('hidden');
+            victoryScreen.classList.remove('hidden');
+
+            const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+            const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+            const accuracyVal = Math.round((correctAnswersCount / totalAttempts) * 100);
+
+            document.getElementById('vic-time').textContent = `${mins}:${secs}`;
+            document.getElementById('vic-accuracy').textContent = `${accuracyVal}%`;
+            document.getElementById('vic-score').textContent = `${score} PTS`;
+
+            // Calculate Rank Title
+            const rankTitle = document.getElementById('vic-rank-title');
+            const rankDesc = document.getElementById('vic-rank-desc');
+            const rankIcon = document.getElementById('vic-rank-icon');
+
+            if (accuracyVal >= 90) {
+                rankTitle.textContent = "MASTER ITIL ARCHITECT";
+                rankDesc.textContent = "Exceptional mastery! You cleared Core Zero with maximum efficiency.";
+                rankIcon.className = "fa-solid fa-crown text-amber-300";
+            } else if (accuracyVal >= 75) {
+                rankTitle.textContent = "SENIOR SLM SPECIALIST";
+                rankDesc.textContent = "Strong command over Service Level Management guidelines.";
+                rankIcon.className = "fa-solid fa-award text-emerald-300";
+            } else {
+                rankTitle.textContent = "JUNIOR SYSADMIN TRAINEE";
+                rankDesc.textContent = "Escaped successfully! Consider reviewing SLM processes to boost precision.";
+                rankIcon.className = "fa-solid fa-user-shield text-cyan-300";
+            }
+        }
+
+        // Game Initialization
+        function startGame() {
+            audio.init();
+            audio.playClick();
+
+            currentQuestionIndex = 0;
+            lives = 3;
+            score = 0;
+            totalAttempts = 0;
+            correctAnswersCount = 0;
+            secondsElapsed = 0;
+
+            scoreDisplay.textContent = "0 PTS";
+            timerDisplay.textContent = "00:00";
+
+            startScreen.classList.add('hidden');
+            gameoverScreen.classList.add('hidden');
+            victoryScreen.classList.add('hidden');
+            
+            gameScreen.classList.remove('hidden');
+            statusBar.classList.remove('hidden');
+
+            startTimer();
+            loadCurrentQuestion();
+        }
+
+        // Event Listeners
+        startBtn.addEventListener('click', startGame);
+        retryBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+
+        // Mute Toggle
+        muteBtn.addEventListener('click', () => {
+            audio.init();
+            audio.muted = !audio.muted;
+            if (audio.muted) {
+                muteIcon.className = "fa-solid fa-volume-xmark text-rose-400";
+            } else {
+                muteIcon.className = "fa-solid fa-volume-high text-cyan-400";
+                audio.playClick();
+            }
+        });
+    </script>
+</body>
+</html>
